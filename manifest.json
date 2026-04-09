@@ -1,0 +1,17 @@
+{
+  "name": "BrainUp App",
+  "short_name": "BrainUp",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#4ade80",
+  "description": "Progressive Web Application for robust academic mastery.",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
