@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>BrainUp</title>
+  <meta name="description" content="Engaging progressive web app for mastering academic categories.">
+  <meta property="og:title" content="BrainUp Quiz Engine">
+  <meta property="og:image" content="logo.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="logo.png">
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <nav class="sidebar">
+      <div class="logo" style="display:flex; align-items:center; margin-bottom: 2rem;"><img src="logo.png" style="height: 80px; filter: invert(1) hue-rotate(180deg) brightness(1.2); border-radius: 12px; margin-left: -0.5rem; margin-top: 1rem;"></div>
+      <ul class="nav-links">
+        <li data-target="dashboard" class="active" id="nav-dashboard">Dashboard</li>
+        <li data-target="categories" id="nav-subjects">Categories</li>
+        <li data-target="profile" id="nav-profile">Profile & Friends</li>
+        <li data-target="leaderboard" id="nav-leaderboard">Leaderboard</li>
+        <li data-target="settings" id="nav-settings">Settings</li>
+        <li data-target="donate" id="nav-donate" style="color: gold; margin-top: 1rem;">Donate/Support</li>
+      </ul>
+      <div class="lang-toggle">
+        <button id="btn-en" class="lang-btn active" onclick="setLang('en')">EN</button>
+        <button id="btn-th" class="lang-btn" onclick="setLang('th')">TH</button>
+      </div>
+      <div class="user-profile">
+        <div class="avatar">👨‍🎓</div>
+        <div class="name">Leo</div>
+      </div>
+    </nav>
+    <main id="app-content" class="content-area">
+      <!-- Content injected by JS -->
+    </main>
+  </div>
+  
+  <div id="crop-modal" class="animate-enter" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
+    <div style="background:var(--surface-color); padding: 1.5rem; border-radius: 16px; width: 90%; max-width: 400px; border: 1px solid rgba(255,255,255,0.1);">
+      <h3 style="margin-bottom: 1rem; color: #fff;">Crop Avatar</h3>
+      <div style="width: 100%; height: 350px; overflow:hidden; border-radius: 12px; background: #000; margin-bottom: 1.5rem;">
+        <img id="crop-target" style="display:block; max-width: 100%;">
+      </div>
+      <div style="display:flex; gap: 1rem;">
+        <button class="answer-btn" style="flex:1; padding: 0.8rem;" onclick="closeCropModal()">Cancel</button>
+        <button class="answer-btn correct" style="flex:1; padding: 0.8rem;" onclick="saveCrop()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed: ', err)); });
+    }
+  </script>
+</body>
+</html>
