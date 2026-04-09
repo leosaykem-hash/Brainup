@@ -41,7 +41,8 @@ const state = {
     players: [], mode: 'ffa', config: { timer: false, timerSec: 15, numQ: 10, difficulty: 1, topic: 'add' },
     questions: [], currentPlayer: 0, currentQuestion: 0, phase: 'create', timerInterval: null
   },
-  publicViewUser: null
+  publicViewUser: null,
+  activeIntervals: [], activeTimeouts: []
 };
 
 let selectedAvatarId = AVATARS[3];
@@ -97,47 +98,154 @@ const TOPIC_CONFIGS = {
   'cs-py': { th: ["แกนหลักของภาษา"], en: ["Language Core"] },
   'cs-js': { th: ["แกนหลักของภาษา"], en: ["Language Core"] },
   'cs-cpp': { th: ["แกนหลักของภาษา"], en: ["Language Core"] },
-  'cs-java': { th: ["แกนหลักของภาษา"], en: ["Language Core"] }
+  'cs-java': { th: ["แกนหลักของภาษา"], en: ["Language Core"] },
+  'trig-ratio': { th: ["ข้ามฉาก-ชิดฉาก-ข้ามชิด", "วงกลมหนึ่งหน่วย", "ค่ามุมมาตรฐาน"], en: ["SOH-CAH-TOA", "Unit Circle", "Standard Angles"] },
+  'trig-id': { th: ["เอกลักษณ์กำลังสอง", "สูตรมุมสองเท่า"], en: ["Pythagorean Identities", "Double Angle Formulas"] },
+  'chem-per': { th: ["สมบัติธาตุตามหมู่", "แนวโน้มตารางธาตุ", "ธาตุแทรนซิชัน"], en: ["Group Properties", "Periodic Trends", "Transition Metals"] },
+  'chem-bond': { th: ["พันธะไอออนิก", "พันธะโควาเลนต์", "รูปร่างโมเลกุล"], en: ["Ionic Bonding", "Covalent Bonding", "Molecular Shapes"] },
+  'fraction': { th: ["การบวก/ลบ", "การคูณ/หาร", "เศษส่วนซ้อน"], en: ["Add/Sub", "Mult/Div", "Complex Fractions"] }
 };
 
 const THEORY_BANKS = {
   'bio-cell': [
     { q: { th: "(Basic) ส่วนประกอบใดควบคุมการทำงานเซลล์?", en: "Control center of the cell?" }, a: "Nucleus", o: ["Mitochondria", "Ribosome", "Golgi"], diff: 1 },
+    { q: { th: "(Basic) แหล่งพลังงานของเซลล์ (Powerhouse) คือออร์แกเนลล์ใด?", en: "Powerhouse of the cell?" }, a: "Mitochondria", o: ["Nucleus", "Ribosome", "Lysosome"], diff: 1 },
+    { q: { th: "(Basic) พืชมีส่วนประกอบใดที่สัตว์ไม่มี?", en: "What do plant cells have that animal cells don't?" }, a: "Chloroplast", o: ["Mitochondria", "Nucleus", "Ribosome"], diff: 1 },
+    { q: { th: "(Basic) เยื่อหุ้มเซลล์มีหน้าที่หลักคืออะไร?", en: "Main function of cell membrane?" }, a: "Control entry/exit", o: ["Make energy", "Store Waste", "Shape"], diff: 1 },
     { q: { th: "(Med) กระบวนการสร้างโปรตีนเกิดขึ้นที่ใด?", en: "Protein synthesis occurs where?" }, a: "Ribosome", o: ["Nucleus", "Vacuole", "Lysosome"], diff: 2 },
-    { q: { th: "(Hard) โครงสร้างใดที่มี DNA นอกเหนือจากนิวเคลียส?", en: "Which organelle has its own DNA excluding the nucleus?" }, a: "Mitochondria", o: ["Endoplasmic Reticulum", "Golgi Apparatus", "Cytoplasm"], diff: 3 }
+    { q: { th: "(Med) ออร์แกเนลล์ใดทำหน้าที่ทำลายขยะในเซลล์?", en: "Which organelle handles waste disposal in cells?" }, a: "Lysosome", o: ["Ribosome", "Chloroplast", "Nucleolus"], diff: 2 },
+    { q: { th: "(Med) กระบวนการแบ่งเซลล์ร่างกายเรียกว่า?", en: "Somatic cell division is called?" }, a: "Mitosis", o: ["Meiosis", "Binary Fission", "Budding"], diff: 2 },
+    { q: { th: "(Hard) โครงสร้างใดที่มี DNA นอกเหนือจากนิวเคลียส?", en: "Which organelle has its own DNA excluding the nucleus?" }, a: "Mitochondria", o: ["Endoplasmic Reticulum", "Golgi Apparatus", "Cytoplasm"], diff: 3 },
+    { q: { th: "(Hard) ขั้นตอนใดของ Mitosis ที่โครโมโซมเรียงตัวกลางเซลล์?", en: "In which Mitosis phase do chromosomes line up?" }, a: "Metaphase", o: ["Prophase", "Anaphase", "Telophase"], diff: 3 },
+    { q: { th: "(Hard) โปรตีนที่ม้วนตัวเสร็จแล้วจะถูกส่งไปปรับแต่งที่ใด?", en: "Where are proteins modified after synthesis?" }, a: "Golgi Apparatus", o: ["Ribosome", "Smooth ER", "Nucleolus"], diff: 3 }
+  ],
+  'bio-human': [
+    { q: { th: "(Basic) หัวใจมนุษย์มีกี่ห้อง?", en: "How many chambers in human heart?" }, a: "4", o: ["2", "3", "5"], diff: 1 },
+    { q: { th: "(Basic) ก๊าซใดที่ร่างกายต้องการจากการหายใจเข้า?", en: "Which gas do we need from breathing in?" }, a: "Oxygen", o: ["Carbon Dioxide", "Nitrogen", "Hydrogen"], diff: 1 },
+    { q: { th: "(Med) อวัยวะใดทำหน้าที่กรองของเสียออกจากเลือด?", en: "Which organ filters waste from blood?" }, a: "Kidneys", o: ["Liver", "Heart", "Lungs"], diff: 2 },
+    { q: { th: "(Med) เส้นเลือดใดนำเลือดออกจากหัวใจ?", en: "Vessel carrying blood AWAY from heart?" }, a: "Artery", o: ["Vein", "Capillary", "Nerve"], diff: 2 },
+    { q: { th: "(Hard) ฮอร์โมนอินซูลินถูกผลิตจากอวัยวะใด?", en: "Insulin is produced by which organ?" }, a: "Pancreas", o: ["Liver", "Spleen", "Appendix"], diff: 3 }
+  ],
+  'trig-ratio': [
+    { q: { th: "(Basic) sin 30° มีค่าเท่าใด?", en: "Value of sin 30°?" }, a: "1/2", o: ["√3/2", "1", "0"], diff: 1 },
+    { q: { th: "(Basic) cos 60° มีค่าเท่าใด?", en: "Value of cos 60°?" }, a: "1/2", o: ["1", "√2/2", "√3/2"], diff: 1 },
+    { q: { th: "(Basic) tan 45° มีค่าเท่าใด?", en: "Value of tan 45°?" }, a: "1", o: ["0", "Infinity", "√3"], diff: 1 },
+    { q: { th: "(Basic) ข้าม/ฉาก คือฟังก์ชันใด?", en: "Opposite/Hypotenuse is?" }, a: "sin", o: ["cos", "tan", "sec"], diff: 1 },
+    { q: { th: "(Basic) ชิด/ฉาก คือฟังก์ชันใด?", en: "Adjacent/Hypotenuse is?" }, a: "cos", o: ["sin", "tan", "csc"], diff: 1 },
+    { q: { th: "(Med) tan 45° + sin 90° = ?", en: "tan 45° + sin 90° = ?" }, a: "2", o: ["1", "3", "√2+1"], diff: 2 },
+    { q: { th: "(Med) ต้นไม้สูง 10 เมตร ทอดเงายาว 10 เมตร มุมเงยคือ?", en: "Tree 10m high, 10m shadow. Elevation angle?" }, a: "45°", o: ["30°", "60°", "90°"], diff: 2 },
+    { q: { th: "(Hard) ถ้า sin A = 3/5 แล้ว cos A (มุมแหลม) คือ?", en: "If sin A = 3/5, find cos A (acute angle)?" }, a: "4/5", o: ["3/4", "1", "5/3"], diff: 3 }
+  ],
+  'alg-exp': [
+    { q: { th: "(Basic) 2^3 มีค่าเท่าใด?", en: "What is 2^3?" }, a: "8", o: ["6", "4", "16"], diff: 1 },
+    { q: { th: "(Basic) 10^0 มีค่าเท่าใด?", en: "Value of 10^0?" }, a: "1", o: ["0", "10", "Error"], diff: 1 },
+    { q: { th: "(Basic) x^a * x^b เท่ากับข้อใด?", en: "x^a * x^b equals?" }, a: "x^(a+b)", o: ["x^(a*b)", "x^(a-b)", "2x^a"], diff: 1 },
+    { q: { th: "(Med) (a^2)^3 มีค่าเท่ากับข้อใด?", en: "(a^2)^3 is equal to?" }, a: "a^6", o: ["a^5", "a^8", "a^1"], diff: 2 },
+    { q: { th: "(Hard) 2^(x+1) = 8 แล้ว x =", en: "2^(x+1) = 8, solve for x?" }, a: "2", o: ["1", "3", "4"], diff: 3 }
+  ],
+  'alg-log': [
+    { q: { th: "(Med) log 100 (ฐาน 10) มีค่าเท่าใด?", en: "log 100 base 10?" }, a: "2", o: ["1", "10", "100"], diff: 2 },
+    { q: { th: "(Med) log 1 (ฐานใดๆ) มีค่าเท่ากับ?", en: "log 1 base b is always?" }, a: "0", o: ["1", "b", "Infinite"], diff: 2 },
+    { q: { th: "(Med) log x - log y เท่ากับข้อใด?", en: "log x - log y = ?" }, a: "log(x/y)", o: ["log(x-y)", "log(xy)", "log(x+y)"], diff: 2 },
+    { q: { th: "(Hard) log a + log b มีค่าเท่ากับข้อใด?", en: "log a + log b = ?" }, a: "log(ab)", o: ["log(a+b)", "log(a-b)", "log(a/b)"], diff: 3 },
+    { q: { th: "(Hard) log_b(b) มีค่าเท่าใด?", en: "Value of log_b(b)?" }, a: "1", o: ["0", "b", "Undefined"], diff: 3 }
+  ],
+  'chem-per': [
+    { q: { th: "(Basic) สัญลักษณ์ของธาตุโซเดียมคืออะไร?", en: "Symbol for Sodium?" }, a: "Na", o: ["S", "So", "N"], diff: 1 },
+    { q: { th: "(Basic) ธาตุหมู่ 18 (Noble Gases) ตัวใดอยู่ที่คาบ 1?", en: "Noble Gas in Period 1?" }, a: "He", o: ["Ne", "Ar", "Kr"], diff: 1 },
+    { q: { th: "(Basic) สัญลักษณ์ของธาตุทอง (Gold) คืออะไร?", en: "Symbol for Gold?" }, a: "Au", o: ["Ag", "Gd", "Go"], diff: 1 },
+    { q: { th: "(Basic) สัญลักษณ์ของธาตุเงิน (Silver) คืออะไร?", en: "Symbol for Silver?" }, a: "Ag", o: ["Au", "Si", "S"], diff: 1 },
+    { q: { th: "(Basic) สัญลักษณ์ของธาตุเหล็ก (Iron) คืออะไร?", en: "Symbol for Iron?" }, a: "Fe", o: ["Ir", "I", "In"], diff: 1 },
+    { q: { th: "(Basic) สารประกอบ CO2 คือก๊าซชนิดใด?", en: "What is CO2?" }, a: "Carbon Dioxide", o: ["Carbon Monoxide", "Oxygen", "Nitrogen"], diff: 1 },
+    { q: { th: "(Basic) H2O คือชื่อทางเคมีของสารใด?", en: "H2O is the chemical name for?" }, a: "Water", o: ["Hydrogen Oxide", "Salt", "Sugar"], diff: 1 },
+    { q: { th: "(Med) ธาตุที่มีเลขอะตอม 6 คือธาตุใด?", en: "Element with atomic number 6?" }, a: "Carbon", o: ["Oxygen", "Nitrogen", "Boron"], diff: 2 },
+    { q: { th: "(Med) ธาตุหมู่ 18 มีชื่อเรียกว่าอะไร?", en: "Group 18 elements are called?" }, a: "Noble Gases", o: ["Halogens", "Alkali Metals", "Transition Metals"], diff: 2 },
+    { q: { th: "(Med) ค่า pH ของสารบริสุทธิ์คือเท่าใด?", en: "pH of pure water?" }, a: "7", o: ["0", "14", "5"], diff: 2 },
+    { q: { th: "(Med) อิเล็กตรอนวงนอกสุดเรียกว่า?", en: "Electrons in outermost shell?" }, a: "Valence Electrons", o: ["Core Electrons", "Protons", "Neutrons"], diff: 2 },
+    { q: { th: "(Hard) ธาตุใดมีความไวต่อการทำปฏิกิริยามากที่สุดในหมู่ 1?", en: "Most reactive element in Group 1?" }, a: "Francium", o: ["Lithium", "Sodium", "Potassium"], diff: 3 },
+    { q: { th: "(Hard) Electronegativity (EN) สูงสุดในตารางธาตุคือธาตุใด?", en: "Highest EN element?" }, a: "Fluorine (F)", o: ["Oxygen (O)", "Chlorine (Cl)", "Cesium (Cs)"], diff: 3 },
+    { q: { th: "(Hard) เลขอะตอม 79 คือธาตุใด?", en: "Atomic number 79 is?" }, a: "Gold", o: ["Silver", "Platinum", "Mercury"], diff: 3 }
+  ],
+  'chem-bond': [
+    { q: { th: "(Basic) พันธะระว่างโลหะกับอโลหะมักเป็นพันธะใด?", en: "Bond between metal and non-metal is usually?" }, a: "Ionic", o: ["Covalent", "Metallic", "Hydrogen"], diff: 1 },
+    { q: { th: "(Basic) พันธะที่เกิดจากอโลหะกับอโลหะคือ?", en: "Bond between non-metal and non-metal?" }, a: "Covalent", o: ["Ionic", "Metallic", "Coordinate"], diff: 1 },
+    { q: { th: "(Med) พันธะที่เกิดจากการใช้ร่วมกันของอิเล็กตรอนคือ?", en: "Bond formed by sharing electrons?" }, a: "Covalent", o: ["Ionic", "Metallic", "Hydrogen"], diff: 2 },
+    { q: { th: "(Med) พันธะใดมีความแข็งแรงที่สุดในการยึดเหนี่ยวในโมเลกุลน้ำ?", en: "Strongest bond between water molecules?" }, a: "Hydrogen Bond", o: ["Covalent", "Ionic", "Van der Waals"], diff: 2 },
+    { q: { th: "(Med) แรงยึดเหนี่ยวระหว่างโมเลกุลไม่มีขั้วคือ?", en: "Intermolecular force between non-polar molecules?" }, a: "London Dispersion", o: ["Dipole-Dipole", "Hydrogen", "Ionic"], diff: 2 },
+    { q: { th: "(Hard) NaCl เป็นการสร้างพันธะรูปแบบใด?", en: "What type of bond is in NaCl?" }, a: "Ionic", o: ["Covalent", "Metallic", "Coordinate"], diff: 3 },
+    { q: { th: "(Hard) รูปร่างโมเลกุลของ CH4 คืออะไร?", en: "Molecular geometry of CH4?" }, a: "Tetrahedral", o: ["Linear", "Bent", "Trigonal Planar"], diff: 3 },
+    { q: { th: "(Hard) พันธะในกราไฟต์เป็นรูปทรงแบบใด?", en: "Structure of graphite bonds?" }, a: "Hexagonal Layers", o: ["3D Network", "Single Chains", "Closed Loops"], diff: 3 }
+  ],
+  'phys-elec': [
+    { q: { th: "(Basic) หน่วยของแรงดันไฟฟ้า (Voltage) คือ?", en: "Unit of Voltage?" }, a: "Volt", o: ["Ampere", "Ohm", "Watt"], diff: 1 },
+    { q: { th: "(Basic) อุปกรณ์ใดใช้จำกัดกระแสไฟฟ้า?", en: "Device used to limit current?" }, a: "Resistor", o: ["Battery", "Wire", "Switch"], diff: 1 },
+    { q: { th: "(Med) กฎของโอห์ม สูตรว่าอย่างไร?", en: "Ohm's Law formula?" }, a: "V = IR", o: ["P = IV", "F = ma", "E = mc²"], diff: 2 },
+    { q: { th: "(Hard) ความต้านทานต่ออนุกรม 2 Ohm และ 3 Ohm ได้รวมเท่าใด?", en: "Total resistance of 2Ω and 3Ω in series?" }, a: "5 Ohm", o: ["1.2 Ohm", "6 Ohm", "1 Ohm"], diff: 3 }
   ],
   'en': [
     { q: { th: "(Basic) Choose tense: I ___ watching TV.", en: "Choose tense: I ___ watching TV." }, a: "am", o: ["is", "are", "were"], diff: 1 },
+    { q: { th: "(Basic) Antonym of 'Hot' is?", en: "Antonym of 'Hot' is?" }, a: "Cold", o: ["Warm", "Warmish", "Spicy"], diff: 1 },
+    { q: { th: "(Basic) Which is a Noun?", en: "Which of these is a Noun?" }, a: "Elephant", o: ["Run", "Red", "Quickly"], diff: 1 },
     { q: { th: "(Med) Synonym of 'Ambiguous' is?", en: "Synonym of 'Ambiguous' is?" }, a: "Vague", o: ["Clear", "Lucid", "Bright"], diff: 2 },
-    { q: { th: "(Hard/Trick) 'Has had' is an example of which tense?", en: "'Has had' is an example of which tense?" }, a: "Present Perfect", o: ["Past Perfect", "Simple Past", "Future Perfect"], diff: 3 }
+    { q: { th: "(Med) Choose correctly: She ___ to school every day.", en: "Choose: She ___ to school every day." }, a: "goes", o: ["go", "gone", "going"], diff: 2 },
+    { q: { th: "(Med) What is the past tense of 'Eat'?", en: "Past tense of 'Eat'?" }, a: "ate", o: ["eaten", "eats", "eating"], diff: 2 },
+    { q: { th: "(Hard/Trick) 'Has had' is an example of which tense?", en: "'Has had' is an example of which tense?" }, a: "Present Perfect", o: ["Past Perfect", "Simple Past", "Future Perfect"], diff: 3 },
+    { q: { th: "(Hard) 'Break a leg' means?", en: "'Break a leg' means?" }, a: "Good Luck", o: ["Get Hurt", "Run Fast", "Fail"], diff: 3 },
+    { q: { th: "(Hard) If I ___ you, I would study harder.", en: "If I ___ you, I would study harder." }, a: "were", o: ["am", "was", "be"], diff: 3 },
+    { q: { th: "(Hard) 'Piece of cake' means?", en: "'Piece of cake' means?" }, a: "Very Easy", o: ["Food", "Difficult", "Broken"], diff: 3 }
   ],
   'cs-py': [
     { q: { th: "(Basic) คำสั่งใดใช้พิมพ์อักษรใน Python?", en: "Function to output text in Python?" }, a: "print()", o: ["echo()", "console.log()", "cout"], diff: 1 },
     { q: { th: "(Basic) ชนิดข้อมูลของ [1, 2, 3] คือ?", en: "Data type of [1, 2, 3]?" }, a: "list", o: ["tuple", "dict", "array"], diff: 1 },
+    { q: { th: "(Basic) การคอมเมนต์บรรทัดเดียวใช้สัญลักษณ์ใด?", en: "Single line comment in Python?" }, a: "#", o: ["//", "/*", "--"], diff: 1 },
     { q: { th: "(Med) len('Hello') ให้ค่าเท่าใด?", en: "len('Hello') returns?" }, a: "5", o: ["4", "0", "TypeError"], diff: 2 },
     { q: { th: "(Med) ผลลัพธ์ของ 3 ** 2 คือ?", en: "Result of 3 ** 2?" }, a: "9", o: ["6", "1", "SyntaxError"], diff: 2 },
+    { q: { th: "(Med) คำสั่งสร้างฟังก์ชันคือคำใด?", en: "Keyword to define function?" }, a: "def", o: ["func", "function", "lambda"], diff: 2 },
     { q: { th: "(Hard/Trick) ค่าของ bool('False') คืออะไร?", en: "Value of bool('False')?" }, a: "True", o: ["False", "Null", "Error"], diff: 3 },
-    { q: { th: "(Hard/Trick) Output ของ `type(lambda: None)` คืออะไร?", en: "Output of `type(lambda: None)`?" }, a: "<class 'function'>", o: ["<class 'lambda'>", "<class 'method'>", "<class 'object'>"], diff: 3 }
+    { q: { th: "(Hard) คำสั่งใดใช้ลบสมาชิก 'x' ออกจาก List?", en: "Remove item 'x' from a List?" }, a: "list.remove('x')", o: ["list.delete('x')", "list.pop('x')", "del(list, 'x')"], diff: 3 },
+    { q: { th: "(Hard/Trick) Output ของ `type(lambda: None)` คืออะไร?", en: "Output of `type(lambda: None)`?" }, a: "<class 'function'>", o: ["<class 'lambda'>", "<class 'method'>", "<class 'object'>"], diff: 3 },
+    { q: { th: "(Hard) List Comprehension: [x*2 for x in [1,2]] ผลลัพธ์คือ?", en: "[x*2 for x in [1,2]] results in?" }, a: "[2, 4]", o: ["[1, 2]", "[x, x]", "Error"], diff: 3 }
   ],
   'cs-js': [
     { q: { th: "(Basic) คำสั่งประกาศตัวแปรแบบเปลี่ยนค่าไม่ได้?", en: "Declare a read-only variable in JS?" }, a: "const", o: ["let", "var", "static"], diff: 1 },
     { q: { th: "(Basic) ชนิดข้อมูล typeof 42 คืออะไร?", en: "typeof 42 is?" }, a: "'number'", o: ["'int'", "'float'", "'digit'"], diff: 1 },
+    { q: { th: "(Basic) สัญลักษณ์ใดใช้บวกเลข?", en: "Symbol for addition?" }, a: "+", o: ["-", "*", "/"], diff: 1 },
     { q: { th: "(Med) ผลของ '5' + 3 คือบรรทัดใด?", en: "Result of '5' + 3?" }, a: "'53'", o: ["8", "NaN", "TypeError"], diff: 2 },
+    { q: { th: "(Med) คำสั่งใดใช้สร้าง Timer?", en: "Set a recurring timer in JS?" }, a: "setInterval()", o: ["setTimeout()", "wait()", "sleep()"], diff: 2 },
+    { q: { th: "(Med) JSON.stringify([1]) คืนค่าอะไร?", en: "JSON.stringify([1]) returns?" }, a: "'[1]'", o: ["[1]", "1", "object"], diff: 2 },
     { q: { th: "(Hard/Trick) typeof NaN คืออะไร?", en: "typeof NaN is?" }, a: "'number'", o: ["'NaN'", "'undefined'", "'object'"], diff: 3 },
     { q: { th: "(Hard/Trick) 0.1 + 0.2 === 0.3 คืนค่าอะไร?", en: "0.1 + 0.2 === 0.3 evaluates to?" }, a: "false", o: ["true", "undefined", "TypeError"], diff: 3 },
-    { q: { th: "(Hard/Trick) typeof [] คืออะไร?", en: "typeof [] is?" }, a: "'object'", o: ["'array'", "'list'", "'undefined'"], diff: 3 }
+    { q: { th: "(Hard/Trick) typeof [] คืออะไร?", en: "typeof [] is?" }, a: "'object'", o: ["'array'", "'list'", "'undefined'"], diff: 3 },
+    { q: { th: "(Hard) คอร์ของ JavaScript Engine ใน Chrome คืออะไร?", en: "Chrome's JS Engine?" }, a: "V8", o: ["SpiderMonkey", "Chakra", "Nitro"], diff: 3 }
   ],
   'cs-cpp': [
     { q: { th: "(Basic) คำสั่งพิมพ์ข้อความทางจอภาพคือ?", en: "Standard output stream in C++?" }, a: "std::cout", o: ["printf", "Console.log", "System.print"], diff: 1 },
+    { q: { th: "(Basic) ตัวแปรชนิดใดใช้เก็บจุดทศนิยม?", en: "Variable type for floating point?" }, a: "float", o: ["int", "char", "bool"], diff: 1 },
+    { q: { th: "(Basic) ต้องปิดท้ายคำสั่งด้วยสัญลักษณ์ใด?", en: "Ends statement with?" }, a: ";", o: [":", ".", ","], diff: 1 },
     { q: { th: "(Med) สัญลักษณ์ที่ใช้บอก Reference/Address คือ?", en: "Address-of reference operator?" }, a: "&", o: ["*", "#", "@"], diff: 2 },
+    { q: { th: "(Med) คำสั่งจองหน่วยความจำแบบ Dynamic คือ?", en: "Allocate dynamic memory keyword?" }, a: "new", o: ["malloc", "alloc", "create"], diff: 2 },
+    { q: { th: "(Med) STL ย่อมาจากอะไร?", en: "What does STL stand for?" }, a: "Standard Template Library", o: ["System Tool Language", "Simple Type List", "Static Tool Library"], diff: 2 },
     { q: { th: "(Hard/Trick) การ Dereference 'Null Pointer' ส่งผลอย่างไร?", en: "Dereferencing a Null Pointer causes?" }, a: "Segmentation Fault", o: ["Returns 0", "Returns NULL", "Compilation Error"], diff: 3 },
-    { q: { th: "(Hard/Trick) Size ของ `char` ใน C++ คือกี่ Byte?", en: "Guaranteed size of `char` in C++?" }, a: "1 Byte", o: ["2 Bytes", "4 Bytes", "Varies by OS"], diff: 3 }
+    { q: { th: "(Hard/Trick) Size ของ `char` ใน C++ คือกี่ Byte?", en: "Guaranteed size of `char` in C++?" }, a: "1 Byte", o: ["2 Bytes", "4 Bytes", "Varies by OS"], diff: 3 },
+    { q: { th: "(Hard) Keyword ใดใช้ห้ามไม่ให้คลาสลูกสืบทอด?", en: "Prevent inheritance with?" }, a: "final", o: ["const", "stop", "sealed"], diff: 3 }
   ],
   'cs-java': [
     { q: { th: "(Basic) Java ใช้คีย์เวิร์ดใดในการสืบทอดคลาส?", en: "Keyword in Java to inherit a class?" }, a: "extends", o: ["implements", "inherits", "super"], diff: 1 },
+    { q: { th: "(Basic) Java ถูกพัฒนาโดยบริษัทใด?", en: "Who developed Java originally?" }, a: "Sun Microsystems", o: ["Microsoft", "Apple", "Google"], diff: 1 },
     { q: { th: "(Med) String ถูกจองพื้นที่ในหน่วยความจำส่วนใด?", en: "Where are String literals stored in Memory?" }, a: "String Pool (Heap)", o: ["Stack", "Registers", "MetaSpace"], diff: 2 },
-    { q: { th: "(Hard/Trick) Interface สามารถมีตัวแปรแบบใดได้เท่านั้น?", en: "Fields in an Interface are implicitly?" }, a: "public static final", o: ["private static", "protected dynamic", "public volatile"], diff: 3 }
-  ]
+    { q: { th: "(Med) คลาสใดเป็น Superclass ของทุกคลาส?", en: "Root of the class hierarchy in Java?" }, a: "Object", o: ["String", "Class", "Main"], diff: 2 },
+    { q: { th: "(Med) JDK ย่อมาจากอะไร?", en: "What does JDK stand for?" }, a: "Java Development Kit", o: ["Java Data Key", "Java Design Kernel", "Just Doing Koala"], diff: 2 },
+    { q: { th: "(Hard/Trick) Interface สามารถมีตัวแปรแบบใดได้เท่านั้น?", en: "Fields in an Interface are implicitly?" }, a: "public static final", o: ["private static", "protected dynamic", "public volatile"], diff: 3 },
+    { q: { th: "(Hard) Garbage Collector ทำงานในระดับใด?", en: "GC works at which level?" }, a: "JVM", o: ["CPU", "OS", "Compiler"], diff: 3 }
+  ],
+  'phys-mech': [
+    { q: { th: "(Basic) หน่วยของแรงคืออะไร?", en: "Unit of Force?" }, a: "Newton", o: ["Watt", "Joule", "Pascal"], diff: 1 },
+    { q: { th: "(Basic) ความเร็วหารด้วยเวลาคืออะไร?", en: "Velocity divided by time is?" }, a: "Acceleration", o: ["Distance", "Speed", "Mass"], diff: 1 },
+    { q: { th: "(Med) งาน (Work) มีหน่วยเป็นอะไร?", en: "Unit of Work?" }, a: "Joule", o: ["Watt", "Newton", "Pascal"], diff: 2 },
+    { q: { th: "(Med) สูตรหาความดัน (P) คือ?", en: "Formula for pressure P?" }, a: "F/A", o: ["m*a", "m*g", "1/2 mv2"], diff: 2 },
+    { q: { th: "(Hard) พลังงานจลน์ (Ek) มีสูตรว่าอย่างไร?", en: "Kinetic energy formula?" }, a: "1/2 mv²", o: ["mgh", "ma", "F.s"], diff: 3 },
+    { q: { th: "(Hard) กฎข้อที่ 2 ของนิวตันคือ?", en: "Newton's 2nd Law?" }, a: "F = ma", o: ["F = Gmm/r2", "v = u+at", "E = mc2"], diff: 3 }
+  ],
 };
 
 const SFX = {
@@ -169,14 +277,25 @@ function getCategories() { return [{ id: 'math-cat', name: t('cats.math'), icon:
 function getSubjectsByCategory(catId) {
   const db = {
     'math-cat': [{ id: 'math-basic', name: t('sub.mathBasic'), icon: '➕' }, { id: 'math-alg', name: t('sub.mathAlg'), icon: '𝔁' }, { id: 'math-trig', name: t('sub.mathTrig'), icon: '📐' }, { id: 'math-calc', name: t('sub.mathCalc'), icon: '∫' }],
-    'sci-cat': [{ id: 'phys', name: t('sub.phys'), icon: '🍎' }, { id: 'bio', name: t('sub.bio'), icon: '🧬' }],
+    'sci-cat': [{ id: 'phys', name: t('sub.phys'), icon: '🍎' }, { id: 'chem', name: t('sub.chem'), icon: '🧪' }, { id: 'bio', name: t('sub.bio'), icon: '🧬' }],
     'lang': [{ id: 'en', name: t('sub.en'), icon: '🌍' }],
     'tech': [{ id: 'cs-py', name: 'Python', icon: '🐍' }, { id: 'cs-js', name: 'JavaScript', icon: '🟨' }, { id: 'cs-cpp', name: 'C++', icon: '⚙️' }, { id: 'cs-java', name: 'Java', icon: '☕' }]
   }; return db[catId] || [];
 }
 function getTopicsBySubject(subjectId) {
-  if (subjectId === 'math-basic') return [{ id: 'add', name: t('topics.add'), icon: '➕', desc: t('topics.addDesc') }, { id: 'fraction', name: t('topics.fraction'), icon: '½', desc: t('topics.fractionDesc') }];
-  if (subjectId === 'math-alg') return [{ id: 'alg-lin', name: t('topics.algLin'), icon: 'ⲭ', desc: t('topics.algLinDesc') }];
+  if (subjectId === 'math-basic') return [
+    { id: 'add', name: t('topics.add'), icon: '➕', desc: t('topics.addDesc') },
+    { id: 'multMath', name: t('topics.multMath'), icon: '✖️', desc: t('topics.multMathDesc') },
+    { id: 'divMath', name: t('topics.divMath'), icon: '➗', desc: t('topics.divMathDesc') },
+    { id: 'fraction', name: t('topics.fraction'), icon: '½', desc: t('topics.fractionDesc') },
+    { id: 'percent', name: t('topics.percent'), icon: '%', desc: t('topics.percentDesc') }
+  ];
+  if (subjectId === 'math-alg') return [
+    { id: 'alg-lin', name: t('topics.algLin'), icon: 'ⲭ', desc: t('topics.algLinDesc') },
+    { id: 'alg-exp', name: t('topics.algExp'), icon: 'ⁿ', desc: t('topics.algExpDesc') },
+    { id: 'alg-log', name: t('topics.algLog'), icon: 'log', desc: t('topics.algLogDesc') },
+    { id: 'alg-seq', name: t('topics.algSeq'), icon: 'Σ', desc: t('topics.algSeqDesc') }
+  ];
   if (subjectId === 'math-calc') return [{ id: 'calc-deriv', name: t('topics.calcDeriv'), icon: '𝑑/', desc: t('topics.calcDerivDesc') }];
   if (subjectId === 'math-trig') return [
     { id: 'trig-ratio', name: t('topics.trigRatio'), icon: '📐', desc: t('topics.trigRatioDesc') },
@@ -184,6 +303,10 @@ function getTopicsBySubject(subjectId) {
     { id: 'trig-eq', name: t('topics.trigEq'), icon: '≈', desc: t('topics.trigEqDesc') },
     { id: 'trig-law', name: t('topics.trigLaw'), icon: '△', desc: t('topics.trigLawDesc') },
     { id: 'trig-inv', name: t('topics.trigInv'), icon: 'arc', desc: t('topics.trigInvDesc') }
+  ];
+  if (subjectId === 'chem') return [
+    { id: 'chem-per', name: t('topics.chemPer'), icon: '💎', desc: t('topics.chemPerDesc') },
+    { id: 'chem-bond', name: t('topics.chemBond'), icon: '🔗', desc: t('topics.chemBondDesc') }
   ];
   if (subjectId === 'phys') return [{ id: 'phys-mech', name: t('topics.physMech'), icon: '🚗', desc: t('topics.physMechDesc') }];
   if (subjectId === 'bio') return [{ id: 'bio-cell', name: t('topics.bioCell'), icon: '🦠', desc: t('topics.bioCellDesc') }];
@@ -203,9 +326,22 @@ function genUID() {
   return newUid;
 }
 
+function clearAllTimers() {
+  state.activeIntervals.forEach(clearBy => clearInterval(clearBy));
+  state.activeTimeouts.forEach(clearBy => clearTimeout(clearBy));
+  state.activeIntervals = []; state.activeTimeouts = [];
+  if (state.room.timerInterval) { clearInterval(state.room.timerInterval); state.room.timerInterval = null; }
+}
+
 function loadUserData() {
-  state.db = JSON.parse(localStorage.getItem('lvlup_users_db') || '{}');
-  state.db['admin'] = { username: 'admin', password: '38854Pt39_', name: 'Administrator', avatar: 'A', xp: 999999, rank: 'admin', uid: '000000', badges: ['flawless', 'marathon', 'math_god'], role: 'admin', streak: 999, friends: [] };
+  try {
+    state.db = JSON.parse(localStorage.getItem('lvlup_users_db') || '{}');
+  } catch(e) { 
+    console.error("Storage corrupted, resetting."); state.db = {}; 
+  }
+  
+  // Inject/Sync Admin account
+  state.db['admin'] = { username: 'admin', password: '38854Pt39_', name: 'Administrator', avatar: 'A', xp: 999999, rank: 'admin', uid: '000000', badges: ['flawless', 'marathon', 'math_god'], role: 'admin', streak: 999, friends: state.db['admin']?.friends || [] };
 
   Object.values(state.db).forEach(u => {
     if (!u.uid && u.username !== 'admin') u.uid = genUID();
@@ -216,16 +352,19 @@ function loadUserData() {
     if (u.facebook === undefined) u.facebook = '';
   });
 
-  localStorage.setItem('lvlup_users_db', JSON.stringify(state.db));
   const activeUser = localStorage.getItem('lvlup_active_user');
   if (activeUser && state.db[activeUser]) { state.user = state.db[activeUser]; state.view = 'dashboard'; } else { state.view = 'login'; }
-  document.getElementById('nav-profile').innerText = t('nav.prof');
-  document.getElementById('nav-settings').innerText = t('nav.set');
-  document.getElementById('nav-donate').innerText = t('nav.don');
   render();
 }
 function saveUserData() {
-  if (state.user && state.user.username) { state.db[state.user.username] = state.user; localStorage.setItem('lvlup_users_db', JSON.stringify(state.db)); }
+  if (state.user && state.user.username) { 
+    state.db[state.user.username] = state.user; 
+    try {
+      localStorage.setItem('lvlup_users_db', JSON.stringify(state.db)); 
+    } catch(e) {
+      showNotification("Storage Full!", "Please export your data or delete old accounts.", "⚠️");
+    }
+  }
 }
 
 let cropperInstance = null;
@@ -288,6 +427,7 @@ window.runAuthValidation = function () {
   uInput.classList.remove('input-error'); pInput.classList.remove('input-error');
   if (isReg) {
     if (uVal.length < 4) { isValid = false; errMsg = "Username ต้องมีอย่างน้อย 4 ตัวอักษร"; uInput.classList.add('input-error'); }
+    else if (["admin", "system", "support", "staff", "root"].includes(uVal.toLowerCase())) { isValid = false; errMsg = "ชื่อนี้ถูกสงวนไว้ ไม่สามารถใช้ได้"; uInput.classList.add('input-error'); }
     else if (!/^[A-Za-z0-9_\-\.\!]+$/.test(uVal)) { isValid = false; errMsg = "Username อนุญาตเฉพาะภาษาอังกฤษ ตัวเลข และ _ - . ! เท่านั้น"; uInput.classList.add('input-error'); }
     else if (pVal.length < 8) { isValid = false; errMsg = "Password ต้องมีอย่างน้อย 8 ตัวอักษร"; pInput.classList.add('input-error'); }
     else if (!/[A-Z]/.test(pVal)) { isValid = false; errMsg = "Password ต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว"; pInput.classList.add('input-error'); }
@@ -372,30 +512,87 @@ window.importData = function (e) {
 }
 
 function generateQuizQuestions(topicId, selectedTypes, numQs, diff = 1) {
-  const qs = []; const isTh = state.lang === 'th';
-  let m1 = diff === 1 ? 15 : (diff === 2 ? 80 : 350); let m2 = diff === 1 ? 5 : (diff === 2 ? 30 : 100);
+  const qs = []; const isTh = state.lang === 'th'; const usedQs = new Set();
+  let m1 = diff === 1 ? 12 : (diff === 2 ? 50 : 200); let m2 = diff === 1 ? 2 : (diff === 2 ? 5 : 20);
+  
   for (let i = 0; i < numQs; i++) {
-    let qStr = "", answer = ""; let optionSet = new Set(); let tType = selectedTypes[Math.floor(Math.random() * selectedTypes.length)];
-    if (THEORY_BANKS[topicId]) {
-      let bank = THEORY_BANKS[topicId]; let available = bank.filter(b => b.diff === diff);
-      if (available.length === 0) available = bank.filter(b => b.diff <= diff); if (available.length === 0) available = bank;
-      let pick = available[Math.floor(Math.random() * available.length)]; qStr = isTh ? pick.q.th : pick.q.en; answer = typeof pick.a === 'object' ? (isTh ? pick.a.th : pick.a.en) : pick.a;
-      pick.o.forEach(optVal => optionSet.add(typeof optVal === 'object' ? (isTh ? optVal.th : optVal.en) : optVal));
+    let qStr = "", answer = ""; let optionSet = new Set(); let attemptsCount = 0;
+    let actualTopicId = topicId;
+    if (selectedTypes && selectedTypes.length > 0) {
+      const typeIdx = selectedTypes[Math.floor(Math.random() * selectedTypes.length)];
+      const subTopics = getTopicsBySubject(topicId);
+      if (subTopics && subTopics[typeIdx]) actualTopicId = subTopics[typeIdx].id;
     }
-    else if (topicId === 'add') {
-      if (diff === 3) { let a = (rand(m2, m1 * 2) * Math.random()).toFixed(3); let b = (rand(m2, m1 * 2) * (Math.random() > 0.5 ? -1 : 1)).toFixed(2); answer = (parseFloat(a) + parseFloat(b)).toFixed(3); qStr = `(${a}) + (${b}) = ?`; }
-      else { let a = rand(m2, m1 * 2), b = rand(m2, m1 * 2); answer = a + b; qStr = `${a} + ${b} = ?`; }
-    }
-    else if (topicId === 'alg-lin') {
-      if (diff >= 2) { let m = rand(-15, 15), B_val = rand(2, 6), A_val = -m * B_val; answer = m.toString(); let B_str = `${B_val}y`; qStr = isTh ? `หาความชัน (m): ${A_val}x + ${B_str} + ${rand(10, 100)} = 0` : `Slope (m) of ${A_val}x + ${B_str} + ${rand(10, 100)}=0?`; }
-      else { let x = rand(10, m2), a = rand(2, 10), b = rand(2, 20), c = a * x + b; answer = x; qStr = `${a}x + ${b} = ${c}, x = ?`; }
-    }
-    else if (topicId === 'phys-mech') { let m = rand(5, 20) * diff, a = rand(2, 10) * diff; answer = (m * a).toString(); qStr = isTh ? `มวล ${m}kg เร่งด้วย ${a}m/s² มีแรง (F)?` : `Force F: mass ${m}kg accel ${a}m/s²?`; }
-    else { answer = "True"; qStr = `Logic missing...`; optionSet.add("False"); }
 
-    optionSet.add(answer.toString()); let attempts = 0;
-    while (optionSet.size < 4 && attempts < 20) { if (!isNaN(answer) && isFinite(answer)) optionSet.add((parseFloat(answer) + (rand(1, 10) * (Math.random() > 0.5 ? 1 : -1))).toFixed(diff === 3 ? 3 : 0)); else optionSet.add(`Option ${attempts + 1}X`); attempts++; }
-    const optionsArr = Array.from(optionSet).slice(0, 4).sort(() => Math.random() - 0.5); qs.push({ q: qStr, options: optionsArr, answer: optionsArr.indexOf(answer.toString()), userAns: null });
+    while (attemptsCount < 50) {
+      qStr = ""; answer = ""; optionSet.clear();
+      if (THEORY_BANKS[actualTopicId]) {
+        let bank = THEORY_BANKS[actualTopicId]; let available = bank.filter(b => b.diff === diff);
+        if (available.length === 0) available = bank.filter(b => b.diff <= diff); if (available.length === 0) available = bank;
+        let pick = available[Math.floor(Math.random() * available.length)]; 
+        qStr = isTh ? pick.q.th : pick.q.en; answer = typeof pick.a === 'object' ? (isTh ? pick.a.th : pick.a.en) : pick.a;
+        pick.o.forEach(optVal => optionSet.add(typeof optVal === 'object' ? (isTh ? optVal.th : optVal.en) : optVal));
+      } else if (actualTopicId === 'add') {
+        let a = rand(m2, m1 * 2), b = rand(m2, m1 * 2); answer = a + b; qStr = `${a} + ${b} = ?`;
+      } else if (actualTopicId === 'multMath') {
+        let a = rand(2, diff === 1 ? 12 : (diff === 2 ? 25 : 99)), b = rand(2, diff === 1 ? 12 : (diff === 2 ? 15 : 25));
+        answer = a * b; qStr = `${a} × ${b} = ?`;
+      } else if (actualTopicId === 'divMath') {
+        let b = rand(2, diff === 1 ? 12 : (diff === 2 ? 15 : 25)), ans = rand(2, diff === 1 ? 12 : (diff === 2 ? 25 : 50)), a = b * ans;
+        answer = ans; qStr = `${a} ÷ ${b} = ?`;
+      } else if (actualTopicId === 'fraction') {
+        let d1 = rand(2, 6 * diff), n1 = rand(1, d1 - 1), d2 = rand(2, 6 * diff), n2 = rand(1, d2 - 1);
+        let op = Math.random() > 0.5 ? '+' : '-';
+        if (op === '+') { answer = `${n1 * d2 + n2 * d1}/${d1 * d2}`; qStr = `${n1}/${d1} + ${n2}/${d2} = ?`; }
+        else { answer = `${Math.abs(n1 * d2 - n2 * d1)}/${d1 * d2}`; qStr = `${n1}/${d1} - ${n2}/${d2} = ?`; }
+      } else if (actualTopicId === 'percent') {
+        let p = [10, 20, 25, 50, 75, 15, 5][rand(0, 6)], val = rand(1, 10) * (diff === 1 ? 100 : 500);
+        answer = (p * val) / 100; qStr = `${p}% ${isTh ? 'ของ' : 'of'} ${val} = ?`;
+      } else if (actualTopicId === 'alg-lin') {
+        if (diff >= 2) { let m = rand(-15, 15), B_val = rand(2, 6), A_val = -m * B_val; answer = m.toString(); qStr = isTh ? `หาความชัน (m): ${A_val}x + ${B_val}y + ${rand(1, 50)} = 0` : `Slope (m) of ${A_val}x + ${B_val}y + ${rand(1, 50)}=0?`; }
+        else { let x = rand(1, 20), a = rand(2, 8), b = rand(1, 20), c = a * x + b; answer = x; qStr = `${a}x + ${b} = ${c}, x = ?`; }
+      } else if (actualTopicId === 'alg-seq') {
+        let a1 = rand(1, 10), d = rand(2, 5), n = rand(4, 10); answer = (a1 + (n - 1) * d).toString();
+        qStr = isTh ? `ลำดับเลขคณิต: ${a1}, ${a1+d}, ${a1+2*d}... ตัวที่ ${n} คือ?` : `Arithmetic Seq: ${a1}, ${a1+d}, ${a1+2*d}... What is term ${n}?`;
+      } else if (actualTopicId === 'trig-ratio') {
+        const angles = [0, 30, 45, 60, 90]; const ang = angles[rand(0, 4)]; const func = ['sin', 'cos', 'tan'][rand(0, 2)];
+        const table = { 'sin':['0','1/2','√2/2','√3/2','1'], 'cos':['1','√3/2','√2/2','1/2','0'], 'tan':['0','1/√3','1','√3','Inf'] };
+        answer = table[func][angles.indexOf(ang)]; qStr = `${func}(${ang}°) = ?`;
+      } else if (actualTopicId === 'calc-deriv') {
+        let c = rand(2, 9), p = rand(2, 5); answer = `${c*p}x^${p-1}`; qStr = isTh ? `อนุพันธ์ของ ${c}x^${p} คือ?` : `Derivative of ${c}x^${p}?`;
+        if (p === 2) answer = `${c*p}x`;
+      } else if (actualTopicId === 'geo-area') {
+        let w = rand(2, 12), h = rand(2, 12); answer = (w * h).toString();
+        qStr = isTh ? `พื้นที่สี่เหลี่ยมผืนผ้า กว้าง ${w} ยาว ${h} คือ?` : `Area of rectangle (w=${w}, h=${h})?`;
+      } else if (actualTopicId === 'stat-basic') {
+        let nums = [rand(1,10), rand(1,10), rand(1,10)]; answer = ((nums[0]+nums[1]+nums[2])/3).toFixed(1);
+        qStr = isTh ? `ค่าเฉลี่ยของ [${nums.join(', ')}] คือ?` : `Mean of [${nums.join(', ')}]?`;
+      } else if (actualTopicId === 'phys-mech') {
+        let m = rand(2, 10 * diff), a = rand(2, 10); answer = (m * a).toString(); qStr = isTh ? `มวล ${m}kg เร่งด้วย ${a}m/s² มีแรง (F)?` : `Force F: mass ${m}kg accel ${a}m/s²?`;
+      } else { 
+        answer = "42"; qStr = isTh ? `วิชา ${actualTopicId} กำลังอยู่ในช่วงอัปเดตระบบเร็วๆ นี้ (Alpha)` : `Topic ${actualTopicId} updated soon. Answer is 42.`; 
+      }
+
+      if (!usedQs.has(qStr)) { usedQs.add(qStr); break; }
+      attemptsCount++;
+      // IF BANK EXHAUSTED: Refresh used list for this specific topic only to allow repeat but shuffled
+      if (attemptsCount === 49) { usedQs.clear(); }
+    }
+
+    optionSet.add(answer.toString()); let distIndices = 0;
+    while (optionSet.size < 4 && distIndices < 40) {
+      if (!isNaN(parseFloat(answer)) && isFinite(answer) && !answer.toString().includes('/')) { 
+        let offset = rand(1, 20) * (Math.random() > 0.5 ? 1 : -1); 
+        if (actualTopicId==='divMath'||actualTopicId==='add'||actualTopicId==='multMath') optionSet.add((parseFloat(answer) + offset).toString()); 
+        else optionSet.add((parseFloat(answer) + (offset/10)).toFixed(1)); 
+      } else {
+        const dummyPool = ["None", "null", "undefined", "NaN", "true", "false", "0", "1", "SyntaxError", "TypeError", "ReferenceError", "void", "object", "array", "string"];
+        optionSet.add(dummyPool[rand(0, dummyPool.length-1)]);
+      }
+      distIndices++;
+    }
+    const optionsArr = Array.from(optionSet).slice(0, 4).sort(() => Math.random() - 0.5);
+    qs.push({ q: qStr, options: optionsArr, answer: optionsArr.indexOf(answer.toString()), userAns: null });
   }
   return qs;
 }
@@ -551,7 +748,26 @@ function render() {
   } else if (state.view === 'room_create') {
     const friendList = (state.user.friends||[]).map(uid => Object.values(state.db).find(v => v.uid === uid)).filter(Boolean);
     const isTh = state.lang==='th';
-    const topicOptions = [{id:'add',n:isTh?'การบวกเลข':'Addition'},{id:'fraction',n:isTh?'เศษส่วน':'Fraction'},{id:'alg-lin',n:isTh?'สมการเชิงเส้น':'Linear Eq'},{id:'calc-deriv',n:isTh?'แคลคูลัส':'Calculus'},{id:'phys-mech',n:isTh?'กลศาสตร์':'Physics'},{id:'bio-cell',n:isTh?'ชีววิทยาเซลล์':'Biology'},{id:'en',n:isTh?'ภาษาอังกฤษ':'English'},{id:'cs-py',n:'Python'},{id:'cs-js',n:'JavaScript'},{id:'cs-cpp',n:'C++'},{id:'cs-java',n:'Java'}];
+    const topicOptions = [
+      {id:'add',n:isTh?'การบวกเลข':'Addition'},
+      {id:'multMath',n:isTh?'การคูณ':'Multiplication'},
+      {id:'divMath',n:isTh?'การหาร':'Division'},
+      {id:'fraction',n:isTh?'เศษส่วน':'Fraction'},
+      {id:'percent',n:isTh?'ร้อยละ/เปอร์เซ็นต์':'Percentage'},
+      {id:'alg-lin',n:isTh?'สมการเชิงเส้น':'Linear Eq'},
+      {id:'trig-ratio',n:isTh?'อัตราส่วนตรีโกณ':'Trig Ratios'},
+      {id:'trig-id',n:isTh?'เอกลักษณ์ตรีโกณ':'Trig Identities'},
+      {id:'calc-deriv',n:isTh?'แคลคูลัส':'Calculus'},
+      {id:'phys-mech',n:isTh?'กลศาสตร์':'Physics'},
+      {id:'chem-per',n:isTh?'ตารางธาตุ':'Periodic Table'},
+      {id:'chem-bond',n:isTh?'พันธะเคมี':'Chemical Bond'},
+      {id:'bio-cell',n:isTh?'ชีววิทยาเซลล์':'Biology'},
+      {id:'en',n:isTh?'ภาษาอังกฤษ':'English'},
+      {id:'cs-py',n:'Python'},
+      {id:'cs-js',n:'JavaScript'},
+      {id:'cs-cpp',n:'C++'},
+      {id:'cs-java',n:'Java'}
+    ];
     appContent.innerHTML = `<h1 class="page-title">${state.lang==='th'?'🎮 สร้างห้องเล่น':'🎮 Create Room'}</h1><p class="page-subtitle">${state.lang==='th'?'ตั้งค่าห้องแล้วเชิญเพื่อนเข้ามาแข่ง':'Configure room settings and invite friends.'}</p>
       <div style="max-width: 600px;">
         <div style="background:rgba(255,255,255,0.05); padding:2rem; border-radius:16px; margin-bottom:1.5rem; border:1px solid rgba(255,255,255,0.1);">
@@ -641,6 +857,7 @@ function render() {
 }
 
 window.navigate = function (view) {
+  clearAllTimers();
   if (typeof SFX !== 'undefined') SFX.click();
   if (view === 'subjects' && !state.quiz.activeCategory) view = 'categories';
   state.view = view;
@@ -692,7 +909,10 @@ window.handleAnswer = function (selectedIndex, btnElement) {
   const qIndex = state.quiz.currentQuestion; const q = state.quiz.questions[qIndex]; q.userAns = selectedIndex;
   const buttons = document.querySelectorAll('.answer-btn'); buttons.forEach(b => { b.disabled = true; b.style.pointerEvents = 'none'; });
   if (selectedIndex === q.answer) { if (typeof SFX !== 'undefined') SFX.correct(); btnElement.classList.add('correct'); state.quiz.score += 1; } else { if (typeof SFX !== 'undefined') SFX.wrong(); btnElement.classList.add('wrong'); buttons[q.answer].classList.add('correct'); }
-  setTimeout(() => { state.quiz.currentQuestion++; render(); }, 1200);
+  const tid = setTimeout(() => { 
+    if (state.view === 'quiz') { state.quiz.currentQuestion++; render(); } 
+  }, 1200);
+  state.activeTimeouts.push(tid);
 }
 
 window.triggerFileSelectSetting = function () { cropTargetMode = 'settings'; document.getElementById('setting-file-upload').click(); }
